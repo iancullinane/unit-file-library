@@ -1,0 +1,17 @@
+[Unit]
+Description=Modify a registered build worker using the jenkins cli
+Requires=get-jar.service
+Requires=register-worker.service
+After=get-jar.service
+After=register-worker.service
+AssertPathExists=/etc/build_environment
+AssertPathExists=/tmp/jenkins-cli.jar
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+EnvironmentFile=/etc/build_environment
+ExecStart=/bin/sh -c 'java -jar /tmp/jenkins-cli.jar -s $JENKINS_URL -webSocket get-node $JENKINS_PREFIX-$SUFFIX | sed "s/<webSocket>false/<webSocket>true/" | java -jar /tmp/jenkins-cli.jar -s $JENKINS_URL -webSocket update-node $JENKINS_PREFIX-$SUFFIX'
+
+[Install]
+WantedBy=multi-user.target

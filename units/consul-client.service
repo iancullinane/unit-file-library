@@ -1,0 +1,25 @@
+[Unit]
+Description=Consul Client
+After=docker.service
+Requires=docker.service
+AssertPathExists=/etc/build_environment
+
+[Service]
+EnvironmentFile=/etc/build_environment
+Environment=DOCKER_IMAGE=<insert>
+Environment=DOCKER_NAME=%p
+Restart=always
+RestartSec=1
+StartLimitInterval=0
+TimeoutStartSec=0
+ExecStartPre=-/usr/bin/docker kill $DOCKER_NAME
+ExecStartPre=-/usr/bin/docker rm $DOCKER_NAME
+ExecStartPre=/usr/bin/docker pull $DOCKER_IMAGE
+ExecStart=/usr/bin/docker run --name $DOCKER_NAME \
+    -v /data/consul-client:/data \
+    --net=host \
+    --cpu-shares=150 \
+    $DOCKER_IMAGE -advertise $COREOS_PRIVATE_IPV4 -log-level=INFO -retry-join "consul-server.${DISCOVERY_ZONE_PREFIX}.${DISCOVERY_DNS_ZONE}" -retry-max 30 -retry-interval 10s
+ExecStop=/usr/bin/docker stop $DOCKER_NAME
+ExecStopPost=-/usr/bin/docker kill $DOCKER_NAME
+ExecStopPost=-/usr/bin/docker rm $DOCKER_NAME

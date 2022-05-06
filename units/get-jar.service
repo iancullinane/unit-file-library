@@ -1,0 +1,13 @@
+[Unit]
+Description=Retrieve the agent jar from Jenkins master
+AssertPathExists=/etc/build_environment
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+EnvironmentFile=/etc/build_environment
+ExecStart=/bin/sh -c 'sleep 10s; curl -L -s -X GET $JENKINS_URL/jnlpJars/agent.jar --output /tmp/agent.jar'
+ExecStart=/bin/sh -c 'sleep 10s; curl -L -s -X GET $JENKINS_URL/jnlpJars/jenkins-cli.jar --output /tmp/jenkins-cli.jar'
+
+[Install]
+WantedBy=multi-user.target

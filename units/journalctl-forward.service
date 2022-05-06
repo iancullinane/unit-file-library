@@ -1,0 +1,31 @@
+[Unit]
+Description=Journal Forwarder
+After=docker.service
+After=splunk-forward.service
+Requires=docker.service
+Requires=splunk-forward.service
+AssertPathExists=/etc/build_environment
+
+[Service]
+EnvironmentFile=/etc/build_environment
+Environment=DOCKER_IMAGE=<insert>
+Environment=DOCKER_NAME=%p
+Restart=always
+RestartSec=1
+StartLimitInterval=0
+TimeoutStartSec=0
+ExecStartPre=-/usr/bin/docker kill $DOCKER_NAME
+ExecStartPre=-/usr/bin/docker rm $DOCKER_NAME
+ExecStartPre=/usr/bin/docker pull $DOCKER_IMAGE
+ExecStartPre=-/bin/mkdir -p /data/journalctl-forward
+ExecStart=/usr/bin/docker run --name $DOCKER_NAME \
+      -v /var/run/journald.sock:/run/journald.sock \
+      -v /data/journalctl-forward:/var/journalctl-forward \
+      -e FORWARD_HOST_ADDR=${COREOS_PRIVATE_IPV4} \
+      -e FORWARD_HOST_PORT=12346 \
+      -e FIELDS=_HOSTNAME,MESSAGE,ACTUAL_TIMESTAMP,_SYSTEMD_UNIT,CONTAINER_NAME,CONTAINER_TAG \
+      --cpu-shares=150 \
+      $DOCKER_IMAGE
+ExecStop=/usr/bin/docker stop $DOCKER_NAME
+ExecStopPost=-/usr/bin/docker kill $DOCKER_NAME
+ExecStopPost=-/usr/bin/docker rm $DOCKER_NAME

@@ -1,0 +1,30 @@
+[Unit]
+Description=DataDog Agent
+After=docker.service
+Requires=docker.service
+Requires=proc-sys-fs-binfmt_misc.mount
+AssertPathExists=/etc/build_environment
+
+[Service]
+EnvironmentFile=/etc/build_environment
+Environment=DOCKER_IMAGE=quay.dgs.io/mgpserver/datadog-agent:prod
+Environment=DOCKER_NAME=%p
+Restart=always
+RestartSec=1
+StartLimitInterval=0
+TimeoutStartSec=0
+ExecStartPre=-/usr/bin/docker kill $DOCKER_NAME
+ExecStartPre=-/usr/bin/docker rm $DOCKER_NAME
+ExecStartPre=/usr/bin/docker pull $DOCKER_IMAGE
+ExecStart=/usr/bin/docker run --name $DOCKER_NAME \
+    -p 8126:8126 \
+    -e DD_API_KEY=${METRIC_KEY} \
+    -e DD_TAGS=env:${APPLICATION_ENVIRONMENT} \
+    -v /var/run/docker.sock:/var/run/docker.sock:ro \
+    -v /proc:/host/proc:ro \
+    -v /sys/fs/cgroup:/host/sys/fs/cgroup:ro \
+    --cpu-shares=150 \
+    $DOCKER_IMAGE
+ExecStop=/usr/bin/docker stop $DOCKER_NAME
+ExecStopPost=-/usr/bin/docker kill $DOCKER_NAME
+ExecStopPost=-/usr/bin/docker rm $DOCKER_NAME

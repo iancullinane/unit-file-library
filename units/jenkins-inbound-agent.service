@@ -1,0 +1,20 @@
+[Unit]
+Description=Connect a build worker using the jar from jenkins master
+Requires=edit-worker.service
+Requires=secret-gen.service
+Requires=get-jar.service
+After=edit-worker.service
+After=secret-gen.service
+AssertPathExists=/etc/build_environment
+
+[Service]
+RemainAfterExit=yes
+EnvironmentFile=/etc/build_environment
+Restart=always
+RestartSec=10
+StartLimitInterval=0
+TimeoutStartSec=0
+ExecStart=/bin/sh -c 'java -jar /tmp/agent.jar -jnlpUrl $JENKINS_URL/computer/$JENKINS_PREFIX-$SUFFIX/slave-agent.jnlp -workDir "/home/jenkins/.jenkins" -secret $SECRET'
+
+[Install]
+WantedBy=multi-user.target

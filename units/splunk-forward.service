@@ -1,0 +1,25 @@
+[Unit]
+Description=Splunk Forwarder
+After=docker.service
+Requires=docker.service
+AssertPathExists=/etc/build_environment
+
+[Service]
+EnvironmentFile=/etc/build_environment
+Environment=DOCKER_IMAGE=<insert>
+Environment=DOCKER_NAME=%p
+Restart=always
+RestartSec=1
+StartLimitInterval=0
+TimeoutStartSec=0
+ExecStartPre=-/usr/bin/docker kill $DOCKER_NAME
+ExecStartPre=-/usr/bin/docker rm $DOCKER_NAME
+ExecStartPre=/usr/bin/docker pull $DOCKER_IMAGE
+ExecStart=/usr/bin/docker run --name $DOCKER_NAME \
+    -p 12346:12346 \
+    -e SPLUNK_INDEX=${LOG_INDEX} \
+    --cpu-shares=150 \
+    $DOCKER_IMAGE
+ExecStop=/usr/bin/docker stop $DOCKER_NAME
+ExecStopPost=-/usr/bin/docker kill $DOCKER_NAME
+ExecStopPost=-/usr/bin/docker rm $DOCKER_NAME

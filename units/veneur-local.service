@@ -1,0 +1,32 @@
+[Unit]
+Description=Veneur
+After=docker.service
+Requires=docker.service
+After=data-dog-agent.service
+Requires=data-dog-agent.service
+AssertPathExists=/etc/build_environment
+
+[Service]
+EnvironmentFile=/etc/build_environment
+Environment=DOCKER_IMAGE=<insert>
+Environment=DOCKER_NAME=%p
+Restart=always
+RestartSec=1
+StartLimitInterval=0
+TimeoutStartSec=0
+ExecStartPre=-/usr/bin/docker kill $DOCKER_NAME
+ExecStartPre=-/usr/bin/docker rm $DOCKER_NAME
+ExecStartPre=/usr/bin/docker pull $DOCKER_IMAGE
+ExecStart=/bin/sh -c "/usr/bin/docker run --name $DOCKER_NAME \
+    --dns $(ip -o -4 addr show docker0 | awk -F '[ /]+' '{print $4}') \
+    -p 8129:8125/udp \
+    -e DATADOG_API_KEY=${METRIC_KEY} \
+    -e VENEUR_WORKERS=8 \
+    -e VENEUR_FORWARD=http://veneur.service.consul:8128 \
+    -e VENEUR_HOSTNAME=$(hostname | grep -q '^ip-' && curl -s http://169.254.169.254/latest/meta-data/instance-id || hostname) \
+    -e APPLICATION_ENVIRONMENT=${APPLICATION_ENVIRONMENT} \
+    --cpu-shares=150 \
+    $DOCKER_IMAGE"
+ExecStop=/usr/bin/docker stop $DOCKER_NAME
+ExecStopPost=-/usr/bin/docker kill $DOCKER_NAME
+ExecStopPost=-/usr/bin/docker rm $DOCKER_NAME

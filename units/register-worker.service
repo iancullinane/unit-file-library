@@ -1,0 +1,38 @@
+[Unit]
+Description=Register a build worker through the jenkins api service
+After=docker.service
+After=suffix-gen.service
+Requires=docker.service
+Requires=suffix-gen.service
+Requires=get-jar.service
+AssertPathExists=/etc/build_environment
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+Environment=DOCKER_NAME=%p
+Environment=DOCKER_IMAGE=<insert>
+EnvironmentFile=/etc/build_environment
+ExecStartPre=-/usr/bin/docker kill $DOCKER_NAME
+ExecStartPre=-/usr/bin/docker rm $DOCKER_NAME
+ExecStartPre=/usr/bin/docker pull $DOCKER_IMAGE
+ExecStart=/bin/sh -cx "/usr/bin/docker run \
+        --name ${DOCKER_NAME}-start \
+        -e SUFFIX=$SUFFIX \
+        -e JENKINS_API_URL=$JENKINS_API_URL \
+        -e JENKINS_URL=$JENKINS_URL \
+        -e JENKINS_TAGS=\"$JENKINS_TAGS\" \
+        -e JENKINS_EXECUTORS=$JENKINS_EXECUTORS \
+        -e JENKINS_PREFIX=$JENKINS_PREFIX \
+        $DOCKER_IMAGE /scripts/create-node.sh"
+ExecStart=/bin/echo "Jenkins node creation complete" 
+ExecStop=/bin/sh -c "/usr/bin/docker run \
+        --name ${DOCKER_NAME}-stop \
+        -e SUFFIX=$SUFFIX \
+        -e JENKINS_API_URL=$JENKINS_API_URL \
+        -e JENKINS_URL=$JENKINS_URL \
+        -e JENKINS_PREFIX=$JENKINS_PREFIX \
+        $DOCKER_IMAGE /scripts/delete-node.sh"
+ExecStop=/bin/echo "Jenkins node deletion complete" 
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,44 @@
+[Unit]
+Description=Nomad Client
+After=docker.service
+Requires=docker.service
+AssertPathExists=/etc/build_environment
+[Service]
+EnvironmentFile=/etc/build_environment
+Environment=DOCKER_IMAGE=<insert>
+Environment=DOCKER_NAME=%p
+Restart=always
+RestartSec=60
+StartLimitInterval=0
+TimeoutStartSec=0
+ExecStartPre=-/usr/bin/docker kill $DOCKER_NAME
+ExecStartPre=-/usr/bin/docker rm $DOCKER_NAME
+ExecStartPre=/usr/bin/docker pull $DOCKER_IMAGE
+ExecStart=/bin/sh -c "/usr/bin/docker run --name $DOCKER_NAME \
+    -e CONSUL_HTTP_ADDR=${COREOS_PRIVATE_IPV4}:8500 \
+    -e ADVERTISE=${COREOS_PRIVATE_IPV4} \
+    -v /run/docker.sock:/run/docker.sock \
+    -v /tmp:/tmp \
+    -v /data/nomad-client:/data/nomad-client \
+    --cap-drop=ALL \
+    --cap-add=CHOWN \
+    --cap-add=DAC_OVERRIDE \
+    --cap-add=SYS_ADMIN \
+    --net=host \
+    --cpu-shares=1000 \
+    $DOCKER_IMAGE \
+      -config /config/client.json \
+      -servers="nomad-server.${DISCOVERY_ZONE_PREFIX}.${DISCOVERY_DNS_ZONE}:4647" \
+      -retry-max=30 \
+      -retry-interval=10s \
+      -dc=dc1 \
+      -region=${REGION} \
+      -node-class=${FLEET_ROLE} \
+      -node=$(/usr/bin/curl -s http://169.254.169.254/latest/meta-data/instance-id) \
+      -meta=availability-zone=$(/usr/bin/curl -s http://169.254.169.254/latest/meta-data/placement/availability-zone) \
+      -meta=instance-type=$(/usr/bin/curl -s http://169.254.169.254/latest/meta-data/instance-type) \
+      -meta=host-ip=${COREOS_PRIVATE_IPV4} \
+      -meta=metric-key=${METRIC_KEY}"
+ExecStop=/usr/bin/docker stop $DOCKER_NAME
+ExecStopPost=-/usr/bin/docker kill $DOCKER_NAME
+ExecStopPost=-/usr/bin/docker rm $DOCKER_NAME

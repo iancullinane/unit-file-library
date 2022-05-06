@@ -1,0 +1,12 @@
+[Unit]
+Description=Put the instance id suffix in the env file
+AssertPathExists=/etc/build_environment
+Requires=docker.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/bin/sh -c "curl http://169.254.169.254/latest/meta-data/instance-id | fold -w 7 | tail -n1 | awk '{print \"SUFFIX=\"$0}'  >> /etc/build_environment"
+
+[Install]
+WantedBy=multi-user.target
