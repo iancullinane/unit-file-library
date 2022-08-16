@@ -6,7 +6,7 @@ steps:
   - name: upload-sheeta-units
     image: plugins/s3
     settings:
-      bucket: sheeta-unit-bucket
+      bucket: sheeta-unit-bucket-sheetaunitbucket5ff5940e-10cbvc7wo1u7b
       region: us-east-2
       access_key:
         from_secret: sheeta_aws_key
